@@ -28,6 +28,8 @@ import torch
 # import torch.nn as nn
 # import torch.nn.functional as F
 # import torch.backends.cudnn as cudnn
+import torchvision.transforms as transforms
+from PIL import Image
 
 
 import pidinet.models as pdm
@@ -98,35 +100,25 @@ args = parser.parse_args()
 
 DataPath = "/media/kolad/HardDisk/Zirkon/"
 FileName = "Z-5c.jpg"
-PathImg = DataPath + FileName
-img = cv2.imread(PathImg)
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
-# if args.seed is None:
-#     args.seed = int(time.time())
+with open(os.path.join(DataPath, FileName), 'rb') as f:
+        img = Image.open(f)
+        img = img.convert('RGB')
 
-
-if args.seed is None:
-        args.seed = int(time.time())
-
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+transform = transforms.Compose([transforms.ToTensor(),normalize])
+img = transform(img)
 
 model = pdm.pidinet(args)
-#model = getattr(pdm, args.model)(args)
 checkpoint = torch.load("pidinet/trained_models/table7_pidinet.pth", map_location='cpu')
+model.load_state_dict(checkpoint['state_dict'])
 
 
-def image_cv2nn(img):
-        img = np.float32(img)
-        img = data_loader.prepare_image_cv2(img)
-        img = torch.unsqueeze(torch.from_numpy(img).cuda(), 0)
-        return img
-
-img = image_cv2nn(img)
-
-model.eval()
-with torch.no_grad():
-        model(img)
+#
+# model.eval()
+# with torch.no_grad():
+#         model(img)
 
 
 #print(checkpoint)
