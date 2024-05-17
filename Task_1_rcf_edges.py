@@ -6,6 +6,33 @@ from rsf_edges import modelini, get_model_edges, modelgpu
 import matplotlib.pyplot as plt
 
 
+class RCF_overcrop:
+	def get_crop_edge(self, x, y, dx, dy, ddx, ddy):
+		img_small = self.img[y:y + dy, x:x + dx]
+		self.result_rsf[y+ddy:y+dy-ddy, x+ddx:x+dx-ddx] = self.model.get_model_edges(img_small)[ddy:dy-ddy, ddx:dx-ddx]
+
+	def get_full_edge(self, dx, dy, ddx, ddy):
+		jmax = math.floor((self.sh[0] - 2 * ddy) / (dy - 2 * ddy))
+		imax = math.floor((self.sh[1] - 2 * ddx) / (dx - 2 * ddx))
+		for i in range(0, imax):
+			for j in range(0, jmax):
+				if (i*jmax + j) % 5 == 0:
+					print(i*jmax + j,"/",imax*jmax)
+				self.get_crop_edge((dx - 2 * ddx) * i, (dy - 2 * ddy) * j, dx, dy, ddx, ddy)
+			y = (dy - 2 * ddy) * jmax
+			self.get_crop_edge((dx - 2 * ddx) * i, y, dx, self.sh[0] - y, ddx, ddy)
+		for j in range(0, jmax):
+			x = (dx - 2 * ddx) * imax
+			self.get_crop_edge(x, (dy - 2 * ddy) * j, self.sh[1] - x, dy, ddx, ddy)
+		return self.result_rsf
+
+	def __init__(self,img):
+		self.img = img
+		self.sh = img.shape
+		self.model = modelgpu()
+		self.result_rsf = np.zeros(img.shape[0:2], np.float32)
+
+
 def step_skeleton(edges_w):
 	edges_0 = np.zeros(edges_w.shape, np.uint8)
 	kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
@@ -24,40 +51,49 @@ def step_skeleton(edges_w):
 
 dx = 1000
 dy = 1000
-ddx = 256
-ddy = 256
+ddx = 64
+ddy = 64
 Path_dir = "/media/kolad/HardDisk/Zirkon"
 
 FileNames = os.listdir(Path_dir)
 print(FileNames)
 
-for FileName in FileNames:
-	FileName = "Z-20e.png"
-	# print(FileName)
-	# Path_dir = Path0 + "/" + FileName + "/"
-	Path_img = Path_dir + "/" + FileName
-	Path_img_edges = Path_dir + "/" + FileName[:-3] + ".tiff"
-	img = cv2.imread(Path_img)
-	model = modelgpu()
-	result_rsf = model.get_model_edges(img)
-	result_rsf = np.uint8((result_rsf / result_rsf.max()) * 255)
-	#ret, result_rsfB = cv2.threshold(result_rsf, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-	result_rsfB = step_skeleton(result_rsf)
-	#exit()
-	fig = plt.figure(figsize=(14, 9))
-	fig.suptitle(FileName, fontsize=16)
-	axs = [fig.add_subplot(1, 2, 1),
-	       fig.add_subplot(1, 2, 2)]
-	axs[0].imshow(img)
-	axs[1].imshow(img)
-	alphas = np.ones(result_rsfB.shape)
-	kernel = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], np.uint8)
-	result_rsfB = cv2.erode(result_rsfB, kernel, iterations=1)
-	alphas[result_rsfB == 255] = 0
-	alphas[result_rsfB == 0] = 1
-	axs[1].imshow(result_rsfB, alpha=alphas)
-	plt.show()
-	#
-	#img_rsf = cv2.merge((result_rsf, result_rsf, result_rsf))
-	#cv2.imwrite(Path_img_edges, img_rsf)
-	exit()
+
+FileName1 = "Z-20e.png"
+FileName2 = "Z-20eup8.png"
+
+
+
+Path_img1 = Path_dir + "/" + FileName1
+Path_img2 = Path_dir + "/" + FileName2
+img1 = cv2.imread(Path_img1)
+img2 = cv2.imread(Path_img2)
+model = modelgpu()
+result_rsf1 = model.get_model_edges(img1)
+result_rsf2 = RCF_overcrop(img2).get_full_edge(dx, dy, ddx, ddy)
+
+result_rsf1 = np.uint8((result_rsf1 / result_rsf1.max()) * 255)
+result_rsf2 = np.uint8((result_rsf2 / result_rsf2.max()) * 255)
+
+
+result_rsf1 = step_skeleton(result_rsf1)
+#result_rsf2 = step_skeleton(result_rsf2)
+ret, result_rsf2 = cv2.threshold(result_rsf2, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+
+cv2.imwrite(Path_dir + "/" + FileName1[:-3] + "_edge_0.png", result_rsf1)
+cv2.imwrite(Path_dir + "/" + FileName2[:-3] + "_edge_0.png", result_rsf2)
+
+fig = plt.figure(figsize=(14, 9))
+axs = [fig.add_subplot(2, 2, 1),
+       fig.add_subplot(2, 2, 2),
+       fig.add_subplot(2, 2, 3),
+       fig.add_subplot(2, 2, 4)]
+axs[0].imshow(img1)
+axs[1].imshow(result_rsf1)
+axs[2].imshow(img2)
+axs[3].imshow(result_rsf2)
+
+plt.show()
+
+exit()
