@@ -81,8 +81,9 @@ result_rsf1 = step_skeleton(result_rsf1)
 ret, result_rsf2 = cv2.threshold(result_rsf2, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 
-cv2.imwrite(Path_dir + "/" + FileName1[:-3] + "_edge_0.png", result_rsf1)
+cv2.imwrite(Path_dir + "/" + FileName1[:-3] + "_edge_0.tif", result_rsf1)
 cv2.imwrite(Path_dir + "/" + FileName2[:-3] + "_edge_0.png", result_rsf2)
+
 
 fig = plt.figure(figsize=(14, 9))
 axs = [fig.add_subplot(2, 2, 1),
