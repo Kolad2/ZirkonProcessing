@@ -1,3 +1,5 @@
 temp
 pyshp-master
 models/RCFcheckpoint_epoch12.pth
+*.pth
+venv
