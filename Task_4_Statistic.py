@@ -25,15 +25,22 @@ def lcdfgen(X, F, N):
               x[i] = X[k]
        return x
 
+Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp"
+FileNames = os.listdir(Path_dir)
+FileName = FileNames[0]
 
-
-mat = loadmat("temp/S.mat", squeeze_me=True)
+mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
 S = mat['S']
 del mat
 
-xmin = 8*5
-f_bins = xmin*np.logspace(0,12,15,base=2)
-xmax = f_bins[-1]
+xmin = np.min(S)
+xmax = np.max(S)
+n = np.ceil(np.log2(xmax/xmin))
+f_bins = xmin*np.logspace(0,n,15,base=2)
+print(n)
+
+
+
 S = S[(S > xmin) & (S < xmax)]
 f, _ = np.histogram(S, bins=f_bins, density=True)
 
@@ -91,6 +98,8 @@ axs[1].plot(fx,f_log,color='black')
 axs[1].set_xscale('log')
 axs[1].set_yscale('log')
 axs[1].set_xlim([f_bins[1], f_bins[-2]])
+fig.suptitle(FileName, fontsize=16)
+fig.savefig("temp/" + FileName + "_S.png")
 plt.show()
 
 exit()

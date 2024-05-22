@@ -14,7 +14,7 @@ def main() -> int:
         print(pimage)
         image = Image.open(f"./inputs/{pimage}").convert('RGB')
         sr_image = model.predict(image)
-        sr_image.save(f"./results/{pimage}_up8.tif")
+        sr_image.save(f"./results/{pimage}_up8.tiff")
 
 
 if __name__ == '__main__':

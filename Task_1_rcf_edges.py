@@ -49,52 +49,58 @@ def step_skeleton(edges_w):
 	return 255 - edges_0
 
 
-dx = 1000
-dy = 1000
+dx = 500
+dy = 500
 ddx = 64
 ddy = 64
-Path_dir = "/media/kolad/HardDisk/Zirkon"
+Path_dirin = "/media/kolad/HardDisk/Zirkon/ZirkonUpscale"
+Path_rcfout = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleRCFEdges"
+Path_binout = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleBINEdges"
 
-FileNames = os.listdir(Path_dir)
+FileNames = os.listdir(Path_dirin)
 print(FileNames)
 
 
-FileName1 = "Z-20e.png"
-FileName2 = "Z-20eup8.png"
-
-
-
-Path_img1 = Path_dir + "/" + FileName1
-Path_img2 = Path_dir + "/" + FileName2
-img1 = cv2.imread(Path_img1)
-img2 = cv2.imread(Path_img2)
-model = modelgpu()
-result_rsf1 = model.get_model_edges(img1)
-result_rsf2 = RCF_overcrop(img2).get_full_edge(dx, dy, ddx, ddy)
-
-result_rsf1 = np.uint8((result_rsf1 / result_rsf1.max()) * 255)
-result_rsf2 = np.uint8((result_rsf2 / result_rsf2.max()) * 255)
-
-
-result_rsf1 = step_skeleton(result_rsf1)
-#result_rsf2 = step_skeleton(result_rsf2)
-ret, result_rsf2 = cv2.threshold(result_rsf2, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-
-cv2.imwrite(Path_dir + "/" + FileName1[:-3] + "_edge_0.tif", result_rsf1)
-cv2.imwrite(Path_dir + "/" + FileName2[:-3] + "_edge_0.png", result_rsf2)
-
-
-fig = plt.figure(figsize=(14, 9))
-axs = [fig.add_subplot(2, 2, 1),
-       fig.add_subplot(2, 2, 2),
-       fig.add_subplot(2, 2, 3),
-       fig.add_subplot(2, 2, 4)]
-axs[0].imshow(img1)
-axs[1].imshow(result_rsf1)
-axs[2].imshow(img2)
-axs[3].imshow(result_rsf2)
-
-plt.show()
+for FileName in FileNames:
+	print(FileName)
+	Path_img = Path_dirin + "/" + FileName
+	Path_rcfedge = Path_rcfout + "/" + FileName[:-4] + "_rcfedge.tiff"
+	Path_binedge = Path_binout + "/" + FileName[:-4] + "_binedge.tiff"
+	if not os.path.exists(Path_rcfedge):
+		img = cv2.imread(Path_img)
+		result_rcf = RCF_overcrop(img).get_full_edge(dx, dy, ddx, ddy)
+		result_rcf = np.uint8((result_rcf / result_rcf.max()) * 255)
+		result_rcf = cv2.merge((result_rcf, result_rcf, result_rcf))
+		cv2.imwrite(Path_rcfedge, result_rcf)
+	else:
+		print("Найден RSF файл границ")
+	if not os.path.exists(Path_binedge):
+		result_rcf = cv2.imread(Path_rcfedge)
+		result_rcf, _, _ = cv2.split(result_rcf)
+		_, result_rcf = cv2.threshold(result_rcf, 0, 255,
+		                              cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+		cv2.imwrite(Path_binedge, result_rcf)
+	else:
+		print("Найден бинарный файл границ")
 
 exit()
+
+#result_rsf1 = step_skeleton(result_rsf1)
+#result_rsf2 = step_skeleton(result_rsf2)
+# ret, result_rsf2 = cv2.threshold(result_rsf2, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+# cv2.imwrite(Path_dir + "/" + FileName2[:-3] + "_edge.png", result_rsf2)
+#
+#
+# fig = plt.figure(figsize=(14, 9))
+# axs = [fig.add_subplot(2, 2, 1),
+#        fig.add_subplot(2, 2, 2),
+#        fig.add_subplot(2, 2, 3),
+#        fig.add_subplot(2, 2, 4)]
+# axs[0].imshow(img1)
+# axs[1].imshow(result_rsf1)
+# axs[2].imshow(img2)
+# axs[3].imshow(result_rsf2)
+#
+# plt.show()
+

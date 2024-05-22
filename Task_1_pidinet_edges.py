@@ -21,7 +21,7 @@ for FileName in FileNames:
 	model = modelgpu()
 	result_rsf = model.get_model_edges(img)
 	result_rsf = np.uint8((result_rsf / result_rsf.max()) * 255)
-	#ret, result_rsfB = cv2.threshold(result_rsf, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+	#ret, result_rsfB = cv2.threshold(result_rcf, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
 	fig = plt.figure(figsize=(14, 9))
 	fig.suptitle(FileName, fontsize=16)
@@ -31,6 +31,6 @@ for FileName in FileNames:
 	axs[1].imshow(cv2.merge((result_rsf,result_rsf,result_rsf)))
 	plt.show()
 	#
-	#img_rsf = cv2.merge((result_rsf, result_rsf, result_rsf))
+	#img_rsf = cv2.merge((result_rcf, result_rcf, result_rcf))
 	#cv2.imwrite(Path_img_edges, img_rsf)
 	exit()

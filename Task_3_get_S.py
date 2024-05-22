@@ -9,47 +9,57 @@ import matplotlib.pyplot as plt
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
 
-Path_dir = "/media/kolad/HardDisk/Zirkon"
-FileName1 = "Z-20eup8.png"
-FileName2 = "Z-20eup8_edge_0.png"
+Path_dir_edges = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleBINEdgesPrep"
+Path_dir_imgs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscale"
+Path_dir_segs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleSegmentation"
 
 
-Path_img1 = Path_dir + "/" + FileName1
-Path_img2 = Path_dir + "/" + FileName2
-img1 = cv2.imread(Path_img1)
-img2 = cv2.imread(Path_img2)
+FileNames = os.listdir(Path_dir_edges)
+print(FileNames)
+
+for FileName in FileNames:
+       print(FileName)
+       Path_img_edges = Path_dir_edges + "/" + FileName
+       Path_img = Path_dir_imgs + "/" + FileName[0:9] + ".tif"
+       Path_img_seg = Path_dir_segs+ "/" + FileName[0:9] + "_segs.tif"
+
+       img_edges = cv2.imread(Path_img_edges)
+       img = cv2.imread(Path_img)
+
+       B, G, R = cv2.split(img_edges)
+
+       G = 255 - G
+
+       G[((R==255) & (B==0))] = 255
+       _, area_marks = cv2.connectedComponents(255-R)
+       area_marks = area_marks + 1
+       area_marks[area_marks == 1] = 0
+       area_marks[((R==255) & (B==0))] = 1
+       area_marks = cv2.watershed(img_edges*0, area_marks)
+       area_marks = area_marks - 1
+       area_marks[area_marks == -2] = 0
+       area_marks[area_marks == -1] = 0
+       #
+       unique, S = np.unique(area_marks, return_counts=True)
+       save_dict = {'S': S[1:]}
+       savemat("temp/" + FileName[0:9] + "_S.mat", save_dict)
+       #
+       rng = np.random.default_rng()
+       MR = np.empty(area_marks.shape, np.uint8)
+       MG = np.empty(area_marks.shape, np.uint8)
+       MB = np.empty(area_marks.shape, np.uint8)
+       for p in np.unique(area_marks):
+              MR[area_marks == p] = rng.integers(0, 255)
+              MG[area_marks == p] = rng.integers(0, 255)
+              MB[area_marks == p] = rng.integers(0, 255)
+       MR[area_marks == 0] = 0
+       MG[area_marks == 0] = 0
+       MB[area_marks == 0] = 0
+       #
+       img_M = cv2.merge((MR, MG, MB))
+       cv2.imwrite(Path_img_seg , img_M)
 
 
 
-B, G, R = cv2.split(img2)
-
-G = 255 - G
-
-G[((R==255) & (B==0))] = 255
-_, area_marks = cv2.connectedComponents(G)
-print(np.unique(G), np.max(G))
-area_marks = cv2.watershed(img1, area_marks)
-#
-unique, S = np.unique(area_marks, return_counts=True)
-
-save_dict = {'S': S}
-savemat("temp/" + "S.mat", save_dict)
 
 
-#
-rng = np.random.default_rng()
-MR = np.empty(area_marks.shape, np.uint8)
-MG = np.empty(area_marks.shape, np.uint8)
-MB = np.empty(area_marks.shape, np.uint8)
-for p in np.unique(area_marks):
-       MR[area_marks == p] = rng.integers(0,255)
-       MG[area_marks == p] = rng.integers(0, 255)
-       MB[area_marks == p] = rng.integers(0, 255)
-img_M = cv2.merge((MR, MG, MB))
-
-
-fig = plt.figure(figsize=(14, 9))
-axs = [fig.add_subplot(1, 1, 1)]
-axs[0].imshow(img1)
-axs[0].imshow(img_M, alpha=0.5)
-plt.show()
