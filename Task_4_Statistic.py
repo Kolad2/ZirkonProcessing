@@ -25,9 +25,9 @@ def lcdfgen(X, F, N):
               x[i] = X[k]
        return x
 
-Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp"
+Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
-FileName = FileNames[0]
+FileName = FileNames[4]
 
 mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
 S = mat['S']
