@@ -55,6 +55,15 @@ def Fweibull(x, alpha, scale):
     return 1 - np.exp(-(x/scale)**alpha)
 
 class Targets:
+    def __init__(self, X, xmin, xmax):
+        self.SlnX = np.mean(np.log(X))
+        self.SlnX2 = np.mean((np.log(X)) ** 2)
+        self.SX = np.mean(X)
+        self.X = X
+        self.n = len(X)
+        self.xmin = xmin
+        self.xmax = xmax
+
     def lognorm(self, s, scale):
         dist = st.lognorm(s, 0, scale)
         Fmin = dist.cdf(self.xmin)
@@ -87,15 +96,6 @@ class Targets:
         part3 = -(a/self.n)*np.sum(np.log(self.X[self.X >= xg]/xg))
         part4 = -np.log(1 - FPM(self.xmin, a, xg))
         return part1 + part2 + part3 + part4
-
-    def __init__(self, X, xmin, xmax):
-        self.SlnX = np.mean(np.log(X))
-        self.SlnX2 = np.mean((np.log(X)) ** 2)
-        self.SX = np.mean(X)
-        self.X = X
-        self.n = len(X)
-        self.xmin = xmin
-        self.xmax = xmax
 
 
 def GetThetaLognorm(X, xmin, xmax):

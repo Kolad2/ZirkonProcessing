@@ -11,6 +11,7 @@ from scipy import stats as st
 
 def get_ecdf(X):
        X, C = np.unique(X, return_counts=True)
+       C[0] = 0
        F = np.cumsum(C)
        F = F/F[-1]
        return X, F
@@ -18,30 +19,28 @@ def get_ecdf(X):
 def lcdfgen(X, F, N):
        Fx = np.sort(np.random.rand(N))
        x = np.zeros(np.shape(Fx))
-       k = 0
+       k = 1
        for i in range(N):
               while Fx[i] > F[k]:
                      k = k + 1
-              x[i] = X[k]
+              x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
        return x
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
-FileName = FileNames[4]
+FileName = FileNames[1]
 
 mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
 S = mat['S']
 del mat
 
-xmin = np.min(S)
+xmin = 8*2
 xmax = np.max(S)
 n = np.ceil(np.log2(xmax/xmin))
 f_bins = xmin*np.logspace(0,n,15,base=2)
-print(n)
 
 
-
-S = S[(S > xmin) & (S < xmax)]
+S = S[(S >= xmin) & (S <= xmax)]
 f, _ = np.histogram(S, bins=f_bins, density=True)
 
 
@@ -58,7 +57,7 @@ S2 = lcdfgen(Sx,Fx, N)
 Sx2, Fx2 = get_ecdf(S2)
 
 
-F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(1 - dist.cdf(xmin))
+F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(dist.cdf(xmax) - dist.cdf(xmin))
 
 
 ac = 10000
@@ -90,7 +89,7 @@ axs[0].fill_between(f_bins, F_min, F_max,
 axs[0].plot(f_bins,F_log, color='black')
 axs[0].plot(Sx,Fx, color='red')
 axs[0].set_xscale('log')
-axs[0].set_xlim([Sx[0], Sx[-1]])
+axs[0].set_xlim([xmin, xmax])
 
 axs[1].fill_between(f_bins, f_min, f_max,
                     alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")

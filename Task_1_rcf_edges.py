@@ -7,9 +7,13 @@ import matplotlib.pyplot as plt
 
 
 class RCF_overcrop:
-	def get_crop_edge(self, x, y, dx, dy, ddx, ddy):
+	def get_small_edge(self, x, y, dx, dy):
 		img_small = self.img[y:y + dy, x:x + dx]
-		self.result_rsf[y+ddy:y+dy-ddy, x+ddx:x+dx-ddx] = self.model.get_model_edges(img_small)[ddy:dy-ddy, ddx:dx-ddx]
+		return self.model.get_model_edges(img_small)
+
+	def get_crop_edge(self, x, y, dx, dy, ddx, ddy):
+		self.result_rsf[y+ddy:y+dy-ddy, x+ddx:x+dx-ddx] =\
+			self.get_small_edge(x, y, dx, dy)[ddy:dy-ddy, ddx:dx-ddx]
 
 	def get_full_edge(self, dx, dy, ddx, ddy):
 		jmax = math.floor((self.sh[0] - 2 * ddy) / (dy - 2 * ddy))
@@ -68,7 +72,8 @@ for FileName in FileNames:
 	Path_binedge = Path_binout + "/" + FileName[:-4] + "_binedge.tiff"
 	if not os.path.exists(Path_rcfedge):
 		img = cv2.imread(Path_img)
-		result_rcf = RCF_overcrop(img).get_full_edge(dx, dy, ddx, ddy)
+		#result_rcf = RCF_overcrop(img).get_full_edge(dx, dy, ddx, ddy)
+		result_rcf = RCF_overcrop(img).get_small_edge(0,0, img.shape[1], img.shape[0])
 		result_rcf = np.uint8((result_rcf / result_rcf.max()) * 255)
 		result_rcf = cv2.merge((result_rcf, result_rcf, result_rcf))
 		cv2.imwrite(Path_rcfedge, result_rcf)
