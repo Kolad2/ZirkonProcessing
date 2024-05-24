@@ -67,10 +67,11 @@ class Targets:
     def lognorm(self, s, scale):
         dist = st.lognorm(s, 0, scale)
         Fmin = dist.cdf(self.xmin)
+        Fmax = dist.cdf(self.xmax)
         mu = math.log(scale)
         part1 = -np.log(s) - self.SlnX2 / (2 * (s ** 2))
         part2 = (2 * mu * self.SlnX - mu ** 2) / (2 * (s ** 2))
-        part3 = -np.log(1 - Fmin)
+        part3 = -np.log(Fmax - Fmin)
         return part1 + part2 + part3
 
     def expon(self, scale):

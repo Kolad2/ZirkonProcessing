@@ -28,77 +28,77 @@ def lcdfgen(X, F, N):
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
-FileName = FileNames[1]
-
-mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
-S = mat['S']
-del mat
-
-xmin = 8*2
-xmax = np.max(S)
-n = np.ceil(np.log2(xmax/xmin))
-f_bins = xmin*np.logspace(0,n,15,base=2)
 
 
-S = S[(S >= xmin) & (S <= xmax)]
-f, _ = np.histogram(S, bins=f_bins, density=True)
+for FileName in FileNames:
+       print(FileName)
+       mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
+       S = mat['S']
+       del mat
+
+       xmin = np.min(S)
+       xmax = np.max(S)
+       n = np.ceil(np.log2(xmax/xmin))
+       f_bins = xmin*np.logspace(0,n,15,base=2)
+       S = S[(S >= xmin) & (S <= xmax)]
+       f, _ = np.histogram(S, bins=f_bins, density=True)
 
 
-theta = GetThetaLognorm(S, xmin, xmax)
-dist = st.lognorm(theta[0], 0, theta[2])
-fx = (f_bins[0:-1] + f_bins[1:])/2
-f_log = dist.pdf(fx)/(1 - dist.cdf(xmin))
+       theta = GetThetaLognorm(S, xmin, xmax)
+       dist = st.lognorm(theta[0], 0, theta[2])
+       fx = (f_bins[0:-1] + f_bins[1:])/2
+       f_log = dist.pdf(fx)/(dist.cdf(xmax) - dist.cdf(xmin))
+
+       N = len(S)
+       Sx, Fx = get_ecdf(S)
+       S2 = lcdfgen(Sx,Fx, N)
+       Sx2, Fx2 = get_ecdf(S2)
 
 
-
-N = len(S)
-Sx, Fx = get_ecdf(S)
-S2 = lcdfgen(Sx,Fx, N)
-Sx2, Fx2 = get_ecdf(S2)
+       F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(dist.cdf(xmax) - dist.cdf(xmin))
 
 
-F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(dist.cdf(xmax) - dist.cdf(xmin))
+       ac = 10000
+       af = np.empty((ac,len(f_bins)-1))
+       aF = np.empty((ac,len(f_bins)))
+       for i in range(ac):
+              s = lcdfgen(Sx,Fx, N)
+              af[i], _ = np.histogram(s, bins=f_bins, density=True)
+              sxp, Fxp = get_ecdf(s)
+              aF[i] = np.interp(f_bins, sxp, Fxp)
 
+       q = 0.5
 
-ac = 10000
-af = np.empty((ac,len(f_bins)-1))
-aF = np.empty((ac,len(f_bins)))
-for i in range(ac):
-       s = lcdfgen(Sx,Fx, N)
-       af[i], _ = np.histogram(s, bins=f_bins, density=True)
-       sxp, Fxp = get_ecdf(s)
-       aF[i] = np.interp(f_bins, sxp, Fxp)
+       # =======
+       f_max = np.quantile(af, 1-q, axis=0)
+       f_min = np.quantile(af, q, axis=0)
+       f_max = np.insert(f_max, 0, f_max[0])
+       f_min = np.append(f_min, f_min[-1])
+       # ==
+       F_max = np.quantile(aF, 1-q, axis=0)
+       F_min = np.quantile(aF, q, axis=0)
+       # =======
 
-q = 0.05
+       fig = plt.figure(figsize=(14, 9))
+       axs = [fig.add_subplot(1, 2, 1),
+              fig.add_subplot(1, 2, 2)]
+       axs[0].fill_between(f_bins, F_min, F_max,
+                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
+       axs[0].plot(f_bins,F_log, color='black')
+       axs[0].plot(Sx,Fx, color='red')
+       axs[0].set_xscale('log')
+       axs[0].set_xlim([xmin, xmax])
 
-# =======
-f_max = np.quantile(af, 1-q, axis=0)
-f_min = np.quantile(af, q, axis=0)
-f_max = np.insert(f_max, 0, f_max[0])
-f_min = np.append(f_min,f_min[-1])
-# ==
-F_max = np.quantile(aF, 1-q, axis=0)
-F_min = np.quantile(aF, q, axis=0)
-# =======
-
-fig = plt.figure(figsize=(14, 9))
-axs = [fig.add_subplot(1, 2, 1),
-       fig.add_subplot(1, 2, 2)]
-axs[0].fill_between(f_bins, F_min, F_max,
-                    alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-axs[0].plot(f_bins,F_log, color='black')
-axs[0].plot(Sx,Fx, color='red')
-axs[0].set_xscale('log')
-axs[0].set_xlim([xmin, xmax])
-
-axs[1].fill_between(f_bins, f_min, f_max,
-                    alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-axs[1].plot(fx,f_log,color='black')
-axs[1].set_xscale('log')
-axs[1].set_yscale('log')
-axs[1].set_xlim([f_bins[1], f_bins[-2]])
-fig.suptitle(FileName, fontsize=16)
-fig.savefig("temp/" + FileName + "_S.png")
-plt.show()
+       axs[1].fill_between(f_bins, f_min, f_max,
+                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
+       axs[1].plot(fx,f_log,color='black')
+       axs[1].set_xscale('log')
+       axs[1].set_yscale('log')
+       axs[1].set_xlim([f_bins[1], f_bins[-2]])
+       fig.suptitle(FileName, fontsize=16)
+       fig.savefig("temp/" + FileName + "_S.png")
+       plt.close('all')
+       #plt.show()
+       #exit()
 
 exit()

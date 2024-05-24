@@ -20,11 +20,11 @@ print(FileNames)
 for FileName in FileNames:
        print(FileName)
        Path_img_edges = Path_dir_edges + "/" + FileName
-       Path_img = Path_dir_imgs + "/" + FileName[0:9] + ".tif"
+       #Path_img = Path_dir_imgs + "/" + FileName[0:9] + ".tif"
        Path_img_seg = Path_dir_segs+ "/" + FileName[0:9] + "_segs.tif"
 
        img_edges = cv2.imread(Path_img_edges)
-       img = cv2.imread(Path_img)
+       #img = cv2.imread(Path_img)
 
        B, G, R = cv2.split(img_edges)
 
@@ -42,7 +42,7 @@ for FileName in FileNames:
        #
        unique, S = np.unique(area_marks, return_counts=True)
        save_dict = {'S': S[1:]}
-       savemat("temp/" + FileName[0:9] + "_S.mat", save_dict)
+       savemat("temp/Data/" + FileName[0:9] + "_S.mat", save_dict)
        #
        rng = np.random.default_rng()
        MR = np.empty(area_marks.shape, np.uint8)
