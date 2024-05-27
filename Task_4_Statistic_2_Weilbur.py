@@ -20,8 +20,10 @@ def get_ecdf(X):
 def lcdfgen(X, F, N):
        Fx = np.sort(np.random.rand(N))
        x = np.zeros(np.shape(Fx))
+       print('ppfdfasdf')
+       print(Fx)
        k = 1
-       for i in range(N):
+       for i in range(0,N):
               while Fx[i] > F[k]:
                      k = k + 1
               x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
@@ -72,8 +74,11 @@ for FileName in FileNames[1:]:
               ks1[i] = np.max(np.abs(Fxp - lF))
               # элемент ансамбля оценки виртуального элмента
               s = lcdfgen(Sx, lF/np.max(lF), N)
-              Sx, Fxp = get_ecdf(s)
               print(Sx)
+              print(lF)
+              print(s)
+              #exit()
+              Sx, Fxp = get_ecdf(s)
               lF = (F(Sx) - F(xmin)) / (F(xmax) - F(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
