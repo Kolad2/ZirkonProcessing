@@ -35,12 +35,14 @@ for FileName in FileNames:
        mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
        S = mat['S']
        del mat
-
        xmin = np.min(S)
+       xmin = max(xmin, 20)
        xmax = np.max(S)
+       S = S[(S >= xmin) & (S <= xmax)]
+       xmin = np.min(S)
+
        n = np.ceil(np.log2(xmax/xmin))
        f_bins = xmin*np.logspace(0,n,15,base=2)
-       S = S[(S >= xmin) & (S <= xmax)]
        f, _ = np.histogram(S, bins=f_bins, density=True)
 
 
@@ -50,13 +52,10 @@ for FileName in FileNames:
        f_log = dist.pdf(fx)/(dist.cdf(xmax) - dist.cdf(xmin))
 
        N = len(S)
-       Sx, Fx = get_ecdf(S)
-       S2 = lcdfgen(Sx,Fx, N)
-       Sx2, Fx2 = get_ecdf(S2)
-
-
-
+       Sx0, Fx0 = get_ecdf(S)
        F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(dist.cdf(xmax) - dist.cdf(xmin))
+       lF0 = (dist.cdf(Sx0) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
+       ks0 = np.max(np.abs(lF0 - Fx0))
 
 
        ac = 1000
@@ -65,64 +64,41 @@ for FileName in FileNames:
        for i in range(ac):
               if i % 100 == 0:
                      print(i, '/', ac)
-              s = lcdfgen(Sx,Fx, N)
+              # Виртуальный элемент ансамбля
+              s = lcdfgen(Sx0, Fx0, N)
               Sx, Fxp = get_ecdf(s)
               theta = GetThetaLognorm(s, xmin, xmax)
               dist = st.lognorm(theta[0], 0, theta[2])
+              # Аппроксимация виртуального элемента
               lF = (dist.cdf(Sx) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
               ks1[i] = np.max(np.abs(Fxp - lF))
-              s = lcdfgen(Sx, lF, N)
+              # элемент ансамбля оценки виртуального элмента
+              s = lcdfgen(Sx, lF/np.max(lF), N)
               Sx, Fxp = get_ecdf(s)
               lF = (dist.cdf(Sx) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
+       alpha = 0.10
+       q1 = np.quantile(ks2, alpha)
+       q2 = np.quantile(ks2, 1 - alpha)
+       print(q1,q2,ks0)
 
 
-       bins = np.linspace(np.min(ks), np.max(ks), 15)
+
+       F_min = F_log - q2
+       F_max = F_log + q2
+
        fig = plt.figure(figsize=(14, 9))
        axs = [fig.add_subplot(1, 1, 1)]
-       axs[0].hist(ks1, bins=bins)
-       axs[0].hist(ks2, bins=bins)
-       #fig.suptitle(FileName, fontsize=16)
-       plt.show()
-
-       exit()
-
-#
-#
-#
-#        q = 0.5
-#
-#        # =======
-#        f_max = np.quantile(af, 1-q, axis=0)
-#        f_min = np.quantile(af, q, axis=0)
-#        f_max = np.insert(f_max, 0, f_max[0])
-#        f_min = np.append(f_min, f_min[-1])
-#        # ==
-#        F_max = np.quantile(aF, 1-q, axis=0)
-#        F_min = np.quantile(aF, q, axis=0)
-#        # =======
-#
-#        fig = plt.figure(figsize=(14, 9))
-#        axs = [fig.add_subplot(1, 2, 1),
-#               fig.add_subplot(1, 2, 2)]
-#        axs[0].fill_between(f_bins, F_min, F_max,
-#                            alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-#        axs[0].plot(f_bins,F_log, color='black')
-#        axs[0].plot(Sx,Fx, color='red')
-#        axs[0].set_xscale('log')
-#        axs[0].set_xlim([xmin, xmax])
-#
-#        axs[1].fill_between(f_bins, f_min, f_max,
-#                            alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-#        axs[1].plot(fx,f_log,color='black')
-#        axs[1].set_xscale('log')
-#        axs[1].set_yscale('log')
-#        axs[1].set_xlim([f_bins[1], f_bins[-2]])
-#        fig.suptitle(FileName, fontsize=16)
-#        fig.savefig("temp/" + FileName + "_S.png")
-#        plt.close('all')
-#        #plt.show()
-#        #exit()
-#
-# exit()
+       axs[0].fill_between(f_bins, F_min, F_max,
+                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
+       axs[0].plot(f_bins,F_log, color='black')
+       axs[0].plot(Sx0, Fx0, color='red')
+       axs[0].set_xscale('log')
+       axs[0].set_xlim([xmin, xmax])
+       axs[0].set_ylim([0, 1])
+       fig.suptitle(FileName + " lognorm", fontsize=16)
+       fig.savefig("temp/" + FileName + "_S.png")
+       #plt.show()
+       plt.close('all')
+       #exit()

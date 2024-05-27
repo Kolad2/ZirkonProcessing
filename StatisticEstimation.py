@@ -14,7 +14,8 @@ from scipy.special import factorial
 from scipy.special import gamma
 import scipy.optimize as opt
 from scipy.optimize import minimize
-
+import warnings
+warnings.filterwarnings("error")
 
 def A(a):
     return ((a - 1) * np.exp(a) + 1) / (a * (a - 1))
@@ -28,31 +29,38 @@ def paretomodif(X,a,xg):
     Y[mask2] = (np.exp((-a)*(X[mask2]/xg - 1)))
     return C*Y
 
-def Fparetomodif(X,a,xg):
+def Fparetomodif(X,a,scale):
     mA = 1/A(a)
     X = np.array(X)
     Y = np.empty(X.shape)
-    mask1 = X >= xg
-    mask2 = X < xg
-    Y[mask1] = 1 - (mA/(a-1))*(X[mask1]/xg)**(1-a)
-    Y[mask2] = mA/a*np.exp(a)*(1 - np.exp(-a*(X[mask2]/xg)))
+    mask1 = X >= scale
+    mask2 = X < scale
+    Y[mask1] = 1 - (mA/(a-1)) * (X[mask1] / scale) ** (1 - a)
+    Y[mask2] = mA/a*np.exp(a)*(1 - np.exp(-a * (X[mask2] / scale)))
     return Y
 
-def FPM(x,a,xg):
+def FPM(x,a,scale):
     mA = 1/A(a)
-    if x >= xg:
-        return 1 - (mA/(a-1))*(x/xg)**(1-a)
+    if x >= scale:
+        return 1 - (mA/(a-1))*(x / scale)**(1 - a)
     else:
-        return (mA/a)*np.exp(a)*(1 - np.exp(-a*(x/xg)))
+        return (mA/a)*np.exp(a)*(1 - np.exp(-a * (x / scale)))
 
 def pareto(x, a, xmin):
     return ((a-1)/xmin)*((x/xmin)**(-a))
 
 def weibull(x, alpha, scale):
-    return (alpha/scale)*(x/scale)**(alpha-1)*np.exp(-(x/scale)**alpha)
+    return (alpha/scale)*((x/scale)**(alpha-1))*np.exp(-(x/scale)**alpha)
 
 def Fweibull(x, alpha, scale):
-    return 1 - np.exp(-(x/scale)**alpha)
+    try:
+        y =  1 - np.exp(-(x/scale)**alpha)
+    except RuntimeWarning:
+        print(scale)
+        print(alpha)
+        print((x/scale))
+        exit()
+    return y
 
 class Targets:
     def __init__(self, X, xmin, xmax):
@@ -75,12 +83,12 @@ class Targets:
         return part1 + part2 + part3
 
     def expon(self, scale):
-        Fmin = 1 - np.exp(xmin / scale)
+        Fmin = 1 - np.exp(self.xmin / scale)
+
         S = - self.SX / scale - np.log(scale) - xmin / scale
         return S
 
     def pareto(self, a, xmin):
-        print(a)
         S = np.log(a-1) + (a-1)*np.log(xmin) - a*self.SlnX
         return S
 
@@ -88,14 +96,16 @@ class Targets:
         part1 = np.log(alpha/scale)
         part2 = (alpha - 1)*(self.SlnX - np.log(scale))
         part3 = -np.mean((self.X/scale)**alpha)
-        part4 = (self.xmin / scale)**alpha
+        part4 = -np.log(np.exp(-(self.xmin / scale)**alpha) - np.exp(-(self.xmax / scale)**alpha))
         return part1 + part2 + part3 + part4
 
     def paretomodif(self, a, xg):
         part1 = - np.log(xg) - np.log(A(a))
         part2 = -(a/self.n)*np.sum(self.X[self.X < xg]/xg - 1)
         part3 = -(a/self.n)*np.sum(np.log(self.X[self.X >= xg]/xg))
-        part4 = -np.log(1 - FPM(self.xmin, a, xg))
+        Fmin = FPM(self.xmin, a, xg)
+        Fmax = FPM(self.xmax, a, xg)
+        part4 = -np.log(Fmax - Fmin)
         return part1 + part2 + part3 + part4
 
 
@@ -104,7 +114,7 @@ def GetThetaLognorm(X, xmin, xmax):
     Tg = Targets(X, xmin, xmax)
     res = minimize(lambda x: -Tg.lognorm(x[0], x[1]),
                    [theta[0], theta[2]],
-                   bounds=((0, None), (0, None)),
+                   bounds=((1e-3, None), (1e-3, None)),
                    method='Nelder-Mead', tol=1e-3)
     return res.x[0], 0, res.x[1]
 
@@ -118,11 +128,11 @@ def GetThetaExpon(X, xmin, xmax):
 
 def GetThetaWeibull(X, xmin, xmax):
     theta = st.weibull_min.fit(X, floc=0)
+    #print(theta)
     Tg = Targets(X, xmin, xmax)
     res = minimize(lambda x: -Tg.weibull(x[0], x[1]),
                    [theta[0], theta[2]], bounds=((1e-3, None), (1e-3, None)),
                    method='Nelder-Mead', tol=1e-3)
-    print(res.x)
     return res.x[0], 0, res.x[1]
 
 def GetThetaPareto(X, xmin, xmax):
@@ -137,7 +147,7 @@ def GetThetaParetoModif(X, xmin, xmax):
     a = 1 + 1 / (np.mean(np.log(X)) - np.log(xmin))
     Tg = Targets(X, xmin, xmax)
     res = minimize(lambda x: -Tg.paretomodif(x[0], x[1]),
-                   [2, xmin], bounds=((1+1e-3, None), (xmin, 100*xmin)),
+                   [a, xmin], bounds=((1+1e-3, None), (xmin, xmax)),
                    method='Nelder-Mead', tol=1e-3)
     return res.x[0], 0, res.x[1]
 
