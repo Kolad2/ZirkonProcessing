@@ -9,31 +9,14 @@ import matplotlib.pyplot as plt
 import StatisticEstimation as SE
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-
-def get_ecdf(X):
-       X, C = np.unique(X, return_counts=True)
-       C[0] = 0
-       F = np.cumsum(C)
-       F = F/F[-1]
-       return X, F
-
-def lcdfgen(X, F, N):
-       Fx = np.sort(np.random.rand(N))
-       x = np.zeros(np.shape(Fx))
-       print('ppfdfasdf')
-       print(Fx)
-       k = 1
-       for i in range(0,N):
-              while Fx[i] > F[k]:
-                     k = k + 1
-              x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
-       return x
+from StatisticEstimation import get_ecdf, lcdfgen
+from scipy.io import savemat
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
 
 
-for FileName in FileNames[1:]:
+for FileName in FileNames:
        print(FileName)
        mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
        S = mat['S']
@@ -52,7 +35,9 @@ for FileName in FileNames[1:]:
        theta = SE.GetThetaWeibull(S, xmin, xmax)
        N = len(S)
        Sx0, Fx0 = get_ecdf(S)
-       F = lambda x: SE.Fweibull(x, theta[0], theta[2])
+       k_alpha = theta[0]
+       lam = theta[2]
+       F = lambda x: SE.Fweibull(x, theta[0], lam)
        F_log = (F(f_bins) - F(xmin))/(F(xmax) - F(xmin))
        lF0 = (F(Sx0) - F(xmin)) / (F(xmax) - F(xmin))
        ks0 = np.max(np.abs(lF0 - Fx0))
@@ -65,31 +50,25 @@ for FileName in FileNames[1:]:
                      print(i, '/', ac)
               # Виртуальный элемент ансамбля
               s = lcdfgen(Sx0, Fx0, N)
-              Sx, Fxp = get_ecdf(s)
+              Sx, Fxp = get_ecdf(s, xmin=xmin)
               theta = SE.GetThetaWeibull(s, xmin, xmax)
               F = lambda x: SE.Fweibull(x, theta[0], theta[2])
               # Аппроксимация виртуального элемента
-
               lF = (F(Sx) - F(xmin)) / (F(xmax) - F(xmin))
               ks1[i] = np.max(np.abs(Fxp - lF))
               # элемент ансамбля оценки виртуального элмента
               s = lcdfgen(Sx, lF/np.max(lF), N)
-              print(Sx)
-              print(lF)
-              print(s)
-              #exit()
               Sx, Fxp = get_ecdf(s)
               lF = (F(Sx) - F(xmin)) / (F(xmax) - F(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
-       alpha = 0.1
-       print(ks2)
+       save_dict = {'ks':ks2,'alpha':k_alpha,'lambda':lam}
+       savemat("temp/Data_Weibull/Weibull_ks_" + FileName[0:4] + ".mat", save_dict)
+
+       # ===============
+       alpha = 0.25
        q1 = np.quantile(ks2, alpha)
        q2 = np.quantile(ks2, 1 - alpha)
-       print(q1,q2,ks0)
-
-
-
        F_min = F_log - q2
        F_max = F_log + q2
 
@@ -101,8 +80,8 @@ for FileName in FileNames[1:]:
        axs[0].plot(Sx0, Fx0, color='red')
        axs[0].set_xscale('log')
        axs[0].set_xlim([xmin, xmax])
-       fig.suptitle(FileName, fontsize=16)
-       fig.savefig("temp/" + FileName + "_S.png")
-       #plt.show()
+       axs[0].set_ylim([0, 1])
+       fig.suptitle(FileName + ' Weilbur', fontsize=16)
+       fig.savefig("temp/Pictures_Weibull/" + FileName + "_S.png")
        plt.close('all')
-       #exit()
+

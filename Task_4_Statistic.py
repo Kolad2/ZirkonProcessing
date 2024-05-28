@@ -8,97 +8,122 @@ from rsf_edges import modelini, get_model_edges, modelgpu
 import matplotlib.pyplot as plt
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
+from StatisticEstimation import get_ecdf, lcdfgen
+import StatisticEstimation as SE
 
-def get_ecdf(X):
-       X, C = np.unique(X, return_counts=True)
-       C[0] = 0
-       F = np.cumsum(C)
-       F = F/F[-1]
-       return X, F
+Root_dir = "/media/kolad/HardDisk/Zirkon"
 
-def lcdfgen(X, F, N):
-       Fx = np.sort(np.random.rand(N))
-       x = np.zeros(np.shape(Fx))
-       k = 1
-       for i in range(N):
-              while Fx[i] > F[k]:
-                     k = k + 1
-              x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
-       return x
-
-Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
-FileNames = os.listdir(Path_dir)
+Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp"
+FileNames = os.listdir(Path_dir + "/Data/")
 
 
 for FileName in FileNames:
        print(FileName)
-       mat = loadmat(Path_dir + "/" + FileName, squeeze_me=True)
+       mat = loadmat(Path_dir + "/Data/" + FileName, squeeze_me=True)
+       Weibull_mat = loadmat(Path_dir + "/Data_Weibull/" + "Weibull_ks_" + FileName[0:4] + ".mat",
+                             squeeze_me=True)
+       LogNorm_mat = loadmat(Path_dir + "/Data_Log-Norm/" + "Log-Norm_ks_" + FileName[0:4] + ".mat",
+                             squeeze_me=True)
+       Power_mat = loadmat(Path_dir + "/Data_Power/" + "Power_ks_" + FileName[0:4] + ".mat",
+                             squeeze_me=True)
+
+       ImgName = FileName[0:FileName.find('_')]
+       RootImgDir = Root_dir + "/ZirkonChoosen"
+       EdgeImgDir =  Root_dir + "/ZirkonUpscaleBINEdgesPrep"
+       SegImgDir = Root_dir + "/ZirkonUpscaleSegmentation"
+       RootImgFile = None
+       EdgeImgFile = None
+       def GetFileName(Name, Dir):
+              for file in os.listdir(Dir):
+                     if file.find(Name) != -1:
+                            return file
+
+
+
+       img_root = cv2.cvtColor(cv2.imread(RootImgDir + "/" + GetFileName(ImgName, RootImgDir)), cv2.COLOR_BGR2RGB)
+       img_edge = cv2.cvtColor(cv2.imread(EdgeImgDir + "/" + GetFileName(ImgName, EdgeImgDir)), cv2.COLOR_BGR2RGB)
+       img_seg = cv2.cvtColor(cv2.imread(SegImgDir + "/" + GetFileName(ImgName, SegImgDir)), cv2.COLOR_BGR2RGB)
+
+       #
        S = mat['S']
        del mat
-
        xmin = np.min(S)
        xmax = np.max(S)
        n = np.ceil(np.log2(xmax/xmin))
        f_bins = xmin*np.logspace(0,n,15,base=2)
        S = S[(S >= xmin) & (S <= xmax)]
-       f, _ = np.histogram(S, bins=f_bins, density=True)
 
+       dist = st.lognorm(LogNorm_mat['sigma'], 0, LogNorm_mat['lambda'])
+       LogNorm_mat['F'] = (dist.cdf(f_bins) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
 
-       theta = GetThetaLognorm(S, xmin, xmax)
-       dist = st.lognorm(theta[0], 0, theta[2])
-       fx = (f_bins[0:-1] + f_bins[1:])/2
-       f_log = dist.pdf(fx)/(dist.cdf(xmax) - dist.cdf(xmin))
+       F2 = lambda x: SE.Fweibull(x, Weibull_mat['alpha'], Weibull_mat['lambda'])
+       Weibull_mat['F'] = (F2(f_bins) - F2(xmin)) / (F2(xmax) - F2(xmin))
 
-       N = len(S)
-       Sx, Fx = get_ecdf(S)
-       S2 = lcdfgen(Sx,Fx, N)
-       Sx2, Fx2 = get_ecdf(S2)
+       F3 = lambda x: SE.Fparetomodif(x, Power_mat['alpha'], Power_mat['lambda'])
+       Power_mat['F'] = (F3(f_bins) - F3(xmin)) / (F3(xmax) - F3(xmin))
 
+       Sx, Fx = get_ecdf(S, xmin=xmin)
 
-       F_log = (dist.cdf(f_bins)-dist.cdf(xmin))/(dist.cdf(xmax) - dist.cdf(xmin))
-
-
-       ac = 10000
-       af = np.empty((ac,len(f_bins)-1))
-       aF = np.empty((ac,len(f_bins)))
-       for i in range(ac):
-              s = lcdfgen(Sx,Fx, N)
-              af[i], _ = np.histogram(s, bins=f_bins, density=True)
-              sxp, Fxp = get_ecdf(s)
-              aF[i] = np.interp(f_bins, sxp, Fxp)
-
-       q = 0.5
-
-       # =======
-       f_max = np.quantile(af, 1-q, axis=0)
-       f_min = np.quantile(af, q, axis=0)
-       f_max = np.insert(f_max, 0, f_max[0])
-       f_min = np.append(f_min, f_min[-1])
-       # ==
-       F_max = np.quantile(aF, 1-q, axis=0)
-       F_min = np.quantile(aF, q, axis=0)
-       # =======
+       alpha = 0.25
+       Power_mat['q'] = np.quantile(Power_mat['ks'], 1 - alpha)
+       Weibull_mat['q'] = np.quantile(Weibull_mat['ks'], 1 - alpha)
+       Power_mat['q'] = np.quantile(Power_mat['ks'], 1 - alpha)
 
        fig = plt.figure(figsize=(14, 9))
-       axs = [fig.add_subplot(1, 2, 1),
-              fig.add_subplot(1, 2, 2)]
-       axs[0].fill_between(f_bins, F_min, F_max,
+       axs = [fig.add_subplot(2, 3, 1),
+              fig.add_subplot(2, 3, 2),
+              fig.add_subplot(2, 3, 3),
+              fig.add_subplot(2, 3, 4),
+              fig.add_subplot(2, 3, 5),
+              fig.add_subplot(2, 3, 6)]
+       #
+       axs[0].imshow(img_root)
+       axs[0].set_title('a)')
+       #
+       axs[1].imshow(img_edge)
+       axs[1].set_title('b)')
+       #
+       axs[2].imshow(img_seg)
+       axs[2].set_title('c)')
+       #
+       axs[3].fill_between(f_bins, LogNorm_mat['F']-Power_mat['q'], LogNorm_mat['F']+Power_mat['q'],
                            alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-       axs[0].plot(f_bins,F_log, color='black')
-       axs[0].plot(Sx,Fx, color='red')
-       axs[0].set_xscale('log')
-       axs[0].set_xlim([xmin, xmax])
-
-       axs[1].fill_between(f_bins, f_min, f_max,
+       axs[3].plot(f_bins, LogNorm_mat['F'], color='black', label="Log-normal law")
+       axs[3].plot(Sx, Fx, color='red', label="Empirical cdf")
+       axs[3].set_xscale('log')
+       axs[3].set_xlim([xmin, xmax])
+       axs[3].set_ylim([0, 1])
+       axs[3].set_title('d)')
+       axs[3].legend(loc='lower right')
+       axs[3].set_xlabel('-, p.u.')
+       #
+       axs[4].fill_between(f_bins, Weibull_mat['F'] - Weibull_mat['q'], Weibull_mat['F'] + Weibull_mat['q'],
                            alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-       axs[1].plot(fx,f_log,color='black')
-       axs[1].set_xscale('log')
-       axs[1].set_yscale('log')
-       axs[1].set_xlim([f_bins[1], f_bins[-2]])
-       fig.suptitle(FileName, fontsize=16)
-       fig.savefig("temp/" + FileName + "_S.png")
-       plt.close('all')
+       axs[4].plot(f_bins, Weibull_mat['F'], color='black', label="Weibull law")
+       axs[4].plot(Sx,Fx, color='red', label="Empirical cdf")
+       axs[4].set_xscale('log')
+       axs[4].set_xlim([xmin, xmax])
+       axs[4].set_ylim([0, 1])
+       axs[4].set_title('e)')
+       axs[4].legend(loc='lower right')
+       axs[4].set_xlabel('-, p.u.')
+       #
+       axs[5].fill_between(f_bins, Power_mat['F'] - Power_mat['q'], Power_mat['F'] + Power_mat['q'],
+                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
+       axs[5].plot(f_bins, Power_mat['F'], color='black', label="Power law")
+       axs[5].plot(Sx, Fx, color='red', label="Empirical cdf")
+       axs[5].set_xscale('log')
+       axs[5].set_xlim([xmin, xmax])
+       axs[5].set_ylim([0, 1])
+       axs[5].set_title('f)')
+       axs[5].legend(loc='lower right')
+       axs[5].set_xlabel('-, p.u.')
+       #
+       fig.suptitle(ImgName, fontsize=16)
+       fig.savefig("temp/Pictures/" + ImgName + ".png")
        #plt.show()
        #exit()
+       plt.close('all')
+
 
 exit()

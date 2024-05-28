@@ -9,23 +9,8 @@ import matplotlib.pyplot as plt
 import StatisticEstimation as SE
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-
-def get_ecdf(X):
-       X, C = np.unique(X, return_counts=True)
-       C[0] = 0
-       F = np.cumsum(C)
-       F = F/F[-1]
-       return X, F
-
-def lcdfgen(X, F, N):
-       Fx = np.sort(np.random.rand(N))
-       x = np.zeros(np.shape(Fx))
-       k = 1
-       for i in range(N):
-              while Fx[i] > F[k]:
-                     k = k + 1
-              x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
-       return x
+from StatisticEstimation import get_ecdf, lcdfgen
+from scipy.io import savemat
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
@@ -53,8 +38,8 @@ for FileName in FileNames:
 
        F = lambda x: SE.Fparetomodif(x, theta[0], theta[2])
        F_log = (F(f_bins) - F(xmin))/(F(xmax) - F(xmin))
-       xlambda = theta[2]
-       ylambda = (F(xlambda) - F(xmin)) / (F(xmax) - F(xmin))
+       k_alpha = theta[0]
+       lam = theta[2]
        lF0 = (F(Sx0) - F(xmin)) / (F(xmax) - F(xmin))
        ks0 = np.max(np.abs(lF0 - Fx0))
 
@@ -66,7 +51,7 @@ for FileName in FileNames:
                      print(i, '/', ac)
               # Виртуальный элемент ансамбля
               s = lcdfgen(Sx0, Fx0, N)
-              Sx, Fxp = get_ecdf(s)
+              Sx, Fxp = get_ecdf(s, xmin=xmin)
               theta = SE.GetThetaParetoModif(s, xmin, xmax)
               F = lambda x: SE.Fparetomodif(x, theta[0], theta[2])
               # Аппроксимация виртуального элемента
@@ -78,7 +63,11 @@ for FileName in FileNames:
               lF = (F(Sx) - F(xmin)) / (F(xmax) - F(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
-       alpha = 0.10
+       save_dict = {'ks': ks2, 'alpha': k_alpha, 'lambda': lam}
+       savemat("temp/Data_Power/Power_ks_" + FileName[0:4] + ".mat", save_dict)
+
+       # ==========
+       alpha = 0.25
        q1 = np.quantile(ks2, alpha)
        q2 = np.quantile(ks2, 1 - alpha)
        print(q1,q2,ks0)
@@ -92,12 +81,11 @@ for FileName in FileNames:
                            alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
        axs[0].plot(f_bins,F_log, color='black')
        axs[0].plot(Sx0, Fx0, color='red')
-       axs[0].plot(xlambda, ylambda, '.', markersize=20, color='black')
        axs[0].set_xscale('log')
        axs[0].set_xlim([xmin, xmax])
        axs[0].set_ylim([0, 1])
        fig.suptitle(FileName + " power law", fontsize=16)
-       fig.savefig("temp/" + FileName + "_S.png")
+       fig.savefig("temp/Pictures_Paretto/" + FileName + "_S.png")
        #plt.show()
        plt.close('all')
        #exit()

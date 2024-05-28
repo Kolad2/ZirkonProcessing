@@ -14,8 +14,10 @@ from scipy.special import factorial
 from scipy.special import gamma
 import scipy.optimize as opt
 from scipy.optimize import minimize
+
 import warnings
-warnings.filterwarnings("error")
+warnings.filterwarnings('error')
+
 
 def A(a):
     return ((a - 1) * np.exp(a) + 1) / (a * (a - 1))
@@ -53,14 +55,28 @@ def weibull(x, alpha, scale):
     return (alpha/scale)*((x/scale)**(alpha-1))*np.exp(-(x/scale)**alpha)
 
 def Fweibull(x, alpha, scale):
-    try:
-        y =  1 - np.exp(-(x/scale)**alpha)
-    except RuntimeWarning:
-        print(scale)
-        print(alpha)
-        print((x/scale))
-        exit()
-    return y
+    return 1 - np.exp(-(x/scale)**alpha)
+
+
+def get_ecdf(X, xmin=None):
+    if xmin is not None:
+        X = np.append(X, xmin)
+    X, C = np.unique(X, return_counts=True)
+    C[0] = 0
+    F = np.cumsum(C)
+    F = F / F[-1]
+    return X, F
+
+
+def lcdfgen(X, F, N):
+    Fx = np.sort(np.random.rand(N))
+    x = np.zeros(np.shape(Fx))
+    k = 1
+    for i in range(0, N):
+        while Fx[i] > F[k]:
+            k = k + 1
+        x[i] = (X[k] - X[k - 1]) / (F[k] - F[k - 1]) * (Fx[i] - F[k - 1]) + X[k - 1]
+    return x
 
 class Targets:
     def __init__(self, X, xmin, xmax):
@@ -114,7 +130,7 @@ def GetThetaLognorm(X, xmin, xmax):
     Tg = Targets(X, xmin, xmax)
     res = minimize(lambda x: -Tg.lognorm(x[0], x[1]),
                    [theta[0], theta[2]],
-                   bounds=((1e-3, None), (1e-3, None)),
+                   bounds=((1e-3, None), (1e-3, xmax)),
                    method='Nelder-Mead', tol=1e-3)
     return res.x[0], 0, res.x[1]
 
@@ -131,7 +147,7 @@ def GetThetaWeibull(X, xmin, xmax):
     #print(theta)
     Tg = Targets(X, xmin, xmax)
     res = minimize(lambda x: -Tg.weibull(x[0], x[1]),
-                   [theta[0], theta[2]], bounds=((1e-3, None), (1e-3, None)),
+                   [theta[0], theta[2]], bounds=((1e-3, None), (1e-3, xmax)),
                    method='Nelder-Mead', tol=1e-3)
     return res.x[0], 0, res.x[1]
 

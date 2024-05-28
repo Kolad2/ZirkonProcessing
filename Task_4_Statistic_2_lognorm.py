@@ -8,23 +8,8 @@ from rsf_edges import modelini, get_model_edges, modelgpu
 import matplotlib.pyplot as plt
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-
-def get_ecdf(X):
-       X, C = np.unique(X, return_counts=True)
-       C[0] = 0
-       F = np.cumsum(C)
-       F = F/F[-1]
-       return X, F
-
-def lcdfgen(X, F, N):
-       Fx = np.sort(np.random.rand(N))
-       x = np.zeros(np.shape(Fx))
-       k = 1
-       for i in range(N):
-              while Fx[i] > F[k]:
-                     k = k + 1
-              x[i] = (X[k] - X[k-1])/(F[k] - F[k-1])*(Fx[i] - F[k-1]) + X[k-1]
-       return x
+from StatisticEstimation import get_ecdf, lcdfgen
+from scipy.io import savemat
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
 FileNames = os.listdir(Path_dir)
@@ -48,6 +33,10 @@ for FileName in FileNames:
 
        theta = GetThetaLognorm(S, xmin, xmax)
        dist = st.lognorm(theta[0], 0, theta[2])
+
+       sigma = theta[0]
+       lam = theta[2]
+
        fx = (f_bins[0:-1] + f_bins[1:])/2
        f_log = dist.pdf(fx)/(dist.cdf(xmax) - dist.cdf(xmin))
 
@@ -66,7 +55,7 @@ for FileName in FileNames:
                      print(i, '/', ac)
               # Виртуальный элемент ансамбля
               s = lcdfgen(Sx0, Fx0, N)
-              Sx, Fxp = get_ecdf(s)
+              Sx, Fxp = get_ecdf(s, xmin)
               theta = GetThetaLognorm(s, xmin, xmax)
               dist = st.lognorm(theta[0], 0, theta[2])
               # Аппроксимация виртуального элемента
@@ -78,13 +67,13 @@ for FileName in FileNames:
               lF = (dist.cdf(Sx) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
-       alpha = 0.10
+       save_dict = {'ks': ks2, 'sigma': sigma, 'lambda': lam}
+       savemat("temp/Data_Log-Norm/Log-Norm_ks_" + FileName[0:4] + ".mat", save_dict)
+
+       # ============
+       alpha = 0.25
        q1 = np.quantile(ks2, alpha)
        q2 = np.quantile(ks2, 1 - alpha)
-       print(q1,q2,ks0)
-
-
-
        F_min = F_log - q2
        F_max = F_log + q2
 
@@ -98,7 +87,7 @@ for FileName in FileNames:
        axs[0].set_xlim([xmin, xmax])
        axs[0].set_ylim([0, 1])
        fig.suptitle(FileName + " lognorm", fontsize=16)
-       fig.savefig("temp/" + FileName + "_S.png")
+       fig.savefig("temp/Pictures_Log-Norm/" + FileName + "_S.png")
        #plt.show()
        plt.close('all')
        #exit()

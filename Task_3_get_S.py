@@ -18,7 +18,6 @@ FileNames = os.listdir(Path_dir_edges)
 print(FileNames)
 
 for FileName in FileNames:
-       print(FileName)
        Path_img_edges = Path_dir_edges + "/" + FileName
        #Path_img = Path_dir_imgs + "/" + FileName[0:9] + ".tif"
        Path_img_seg = Path_dir_segs+ "/" + FileName[0:9] + "_segs.tif"
