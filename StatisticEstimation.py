@@ -78,6 +78,13 @@ def lcdfgen(X, F, N):
         x[i] = (X[k] - X[k - 1]) / (F[k] - F[k - 1]) * (Fx[i] - F[k - 1]) + X[k - 1]
     return x
 
+
+def get_pv(ks ,v):
+    X, F = get_ecdf(ks, xmin=None)
+    xmin = X[0]
+    xmax = X[-1]
+    return np.interp(v, X, F)
+
 class Targets:
     def __init__(self, X, xmin, xmax):
         self.SlnX = np.mean(np.log(X))

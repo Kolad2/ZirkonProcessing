@@ -8,7 +8,7 @@ from rsf_edges import modelini, get_model_edges, modelgpu
 import matplotlib.pyplot as plt
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-from StatisticEstimation import get_ecdf, lcdfgen
+from StatisticEstimation import get_ecdf, lcdfgen, get_pv
 from scipy.io import savemat
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
@@ -67,7 +67,11 @@ for FileName in FileNames:
               lF = (dist.cdf(Sx) - dist.cdf(xmin)) / (dist.cdf(xmax) - dist.cdf(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
-       save_dict = {'ks': ks2, 'sigma': sigma, 'lambda': lam}
+
+       pv = get_pv(ks2, ks0)
+
+       print(pv)
+       save_dict = {'ks': ks2, 'sigma': sigma, 'lambda': lam, 'pv': pv, 'N': N}
        savemat("temp/Data_Log-Norm/Log-Norm_ks_" + FileName[0:4] + ".mat", save_dict)
 
        # ============

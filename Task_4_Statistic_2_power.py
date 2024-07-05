@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import StatisticEstimation as SE
 from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-from StatisticEstimation import get_ecdf, lcdfgen
+from StatisticEstimation import get_ecdf, lcdfgen, get_pv
 from scipy.io import savemat
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp/Data"
@@ -63,7 +63,9 @@ for FileName in FileNames:
               lF = (F(Sx) - F(xmin)) / (F(xmax) - F(xmin))
               ks2[i] = np.max(np.abs(Fxp - lF))
 
-       save_dict = {'ks': ks2, 'alpha': k_alpha, 'lambda': lam}
+       pv = get_pv(ks2, ks0)
+
+       save_dict = {'ks': ks2, 'alpha': k_alpha, 'lambda': lam, 'pv': pv, 'N': N}
        savemat("temp/Data_Power/Power_ks_" + FileName[0:4] + ".mat", save_dict)
 
        # ==========

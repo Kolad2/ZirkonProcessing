@@ -10,11 +10,19 @@ from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
 from StatisticEstimation import get_ecdf, lcdfgen
 import StatisticEstimation as SE
+import matplotlib as mpl
+
+import matplotlib.font_manager
+
+font_path = "/usr/share/fonts/truetype/msttcorefonts/times.ttf"
+custom_font = mpl.font_manager.FontProperties(fname=font_path, size = 16)
+
 
 Root_dir = "/media/kolad/HardDisk/Zirkon"
 
 Path_dir = "/home/kolad/PycharmProjects/ZirkonProcessing/temp"
 FileNames = os.listdir(Path_dir + "/Data/")
+
 
 
 for FileName in FileNames:
@@ -27,6 +35,19 @@ for FileName in FileNames:
        Power_mat = loadmat(Path_dir + "/Data_Power/" + "Power_ks_" + FileName[0:4] + ".mat",
                              squeeze_me=True)
 
+
+       pv = LogNorm_mat["pv"]
+       N = LogNorm_mat["N"]
+       print(N, pv)
+       continue
+
+       print(get_pv(X, F, 0.08))
+       # exit()
+       fig = plt.figure(figsize=(14, 9))
+       axs = [fig.add_subplot(1, 1, 1)]
+       axs[0].plot(X,F)
+       plt.show()
+       exit()
        ImgName = FileName[0:FileName.find('_')]
        RootImgDir = Root_dir + "/ZirkonChoosen"
        EdgeImgDir =  Root_dir + "/ZirkonUpscaleBINEdgesPrep"
@@ -78,52 +99,66 @@ for FileName in FileNames:
               fig.add_subplot(2, 3, 6)]
        #
        axs[0].imshow(img_root)
-       axs[0].set_title('a)')
+       axs[0].set_title('а)', fontsize=16, fontproperties=custom_font)
+       axs[0].get_xaxis().set_visible(False)
+       axs[0].get_yaxis().set_visible(False)
        #
        axs[1].imshow(img_edge)
-       axs[1].set_title('b)')
+       axs[1].set_title('б)', fontsize=16, fontproperties=custom_font)
+       axs[1].get_xaxis().set_visible(False)
+       axs[1].get_yaxis().set_visible(False)
        #
        axs[2].imshow(img_seg)
-       axs[2].set_title('c)')
+       axs[2].set_title('в)', fontsize=16, fontproperties=custom_font)
+       axs[2].get_xaxis().set_visible(False)
+       axs[2].get_yaxis().set_visible(False)
        #
-       axs[3].fill_between(f_bins, LogNorm_mat['F']-Power_mat['q'], LogNorm_mat['F']+Power_mat['q'],
-                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-       axs[3].plot(f_bins, LogNorm_mat['F'], color='black', label="Log-normal law")
-       axs[3].plot(Sx, Fx, color='red', label="Empirical cdf")
+       axs[3].fill_between(f_bins*(0.043**2), LogNorm_mat['F']-Power_mat['q'], LogNorm_mat['F']+Power_mat['q'],
+                           alpha=0.6, linewidth=0, color='grey', label="1")
+       axs[3].plot(f_bins*(0.043**2), LogNorm_mat['F'], color='black', label="2", linestyle="--")
+       axs[3].plot(Sx*(0.043**2), Fx, color='black', label="3")
        axs[3].set_xscale('log')
-       axs[3].set_xlim([xmin, xmax])
+       axs[3].set_xlim([xmin*(0.043**2), xmax*(0.043**2)])
        axs[3].set_ylim([0, 1])
-       axs[3].set_title('d)')
-       axs[3].legend(loc='lower right')
-       axs[3].set_xlabel('-, p.u.')
+       axs[3].set_title('а)', fontsize=16, fontproperties=custom_font)
+       axs[3].legend(loc='lower right', fontsize=16, prop=custom_font)
+       axs[3].set_xlabel(r'S, мкм$^\mathregular{2}$', fontproperties=custom_font)
+       axs[3].xaxis.set_tick_params(labelsize=16)
+       axs[3].yaxis.set_tick_params(labelsize=16, labelfontfamily='sans-serif')
        #
-       axs[4].fill_between(f_bins, Weibull_mat['F'] - Weibull_mat['q'], Weibull_mat['F'] + Weibull_mat['q'],
-                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-       axs[4].plot(f_bins, Weibull_mat['F'], color='black', label="Weibull law")
-       axs[4].plot(Sx,Fx, color='red', label="Empirical cdf")
+       axs[4].fill_between(f_bins*(0.043**2), Weibull_mat['F'] - Weibull_mat['q'], Weibull_mat['F'] + Weibull_mat['q'],
+                           alpha=0.6, linewidth=0, color='grey', label="1")
+       axs[4].plot(f_bins*(0.043**2), Weibull_mat['F'], color='black', label="2", linestyle="--")
+       axs[4].plot(Sx*(0.043**2),Fx, color='black', label="3")
        axs[4].set_xscale('log')
-       axs[4].set_xlim([xmin, xmax])
+       axs[4].set_xlim([xmin*(0.043**2), xmax*(0.043**2)])
        axs[4].set_ylim([0, 1])
-       axs[4].set_title('e)')
-       axs[4].legend(loc='lower right')
-       axs[4].set_xlabel('-, p.u.')
+       axs[4].set_title('б)', fontsize=16, fontproperties=custom_font)
+       axs[4].legend(loc='lower right', fontsize=16, prop=custom_font)
+       axs[4].set_xlabel(r'S, мкм$^\mathregular{2}$', fontproperties=custom_font)
+       axs[4].xaxis.set_tick_params(labelsize=16)
+       axs[4].yaxis.set_tick_params(labelsize=16)
        #
-       axs[5].fill_between(f_bins, Power_mat['F'] - Power_mat['q'], Power_mat['F'] + Power_mat['q'],
-                           alpha=0.6, linewidth=0, color='grey', label="Сonfidence interval")
-       axs[5].plot(f_bins, Power_mat['F'], color='black', label="Power law")
-       axs[5].plot(Sx, Fx, color='red', label="Empirical cdf")
+       axs[5].fill_between(f_bins*(0.043**2), Power_mat['F'] - Power_mat['q'], Power_mat['F'] + Power_mat['q'],
+                           alpha=0.6, linewidth=0, color='grey', label="1")
+       axs[5].plot(f_bins*(0.043**2), Power_mat['F'], color='black', label="2", linestyle="--")
+       axs[5].plot(Sx*(0.043**2), Fx, color='black', label="3")
        axs[5].set_xscale('log')
-       axs[5].set_xlim([xmin, xmax])
+       axs[5].set_xlim([xmin*(0.043**2), xmax*(0.043**2)])
        axs[5].set_ylim([0, 1])
-       axs[5].set_title('f)')
-       axs[5].legend(loc='lower right')
-       axs[5].set_xlabel('-, p.u.')
+       axs[5].set_title('в)', fontproperties=custom_font)
+       axs[5].legend(loc='lower right', prop=custom_font)
+       axs[5].set_xlabel(r'S, мкм$^\mathregular{2}$', fontproperties=custom_font)
+       # Установка шрифта для чисел делений шкал
+       for ax in axs:
+              for label in ax.get_xticklabels() + ax.get_yticklabels():
+                     label.set_fontproperties(custom_font)
        #
        fig.suptitle(ImgName, fontsize=16)
        fig.savefig("temp/Pictures/" + ImgName + ".png")
-       #plt.show()
-       #exit()
+       plt.show()
        plt.close('all')
+       exit()
 
 
 exit()
