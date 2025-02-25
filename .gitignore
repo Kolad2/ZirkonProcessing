@@ -5,3 +5,4 @@ models/RCFcheckpoint_epoch12.pth
 *.img
 venv
 results/*
+data/*
