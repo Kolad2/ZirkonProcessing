@@ -21,14 +21,19 @@ def main():
     
     file_names = os.listdir(str(path_dir_edges))
     
-    data = {}
+    with open("./data/config.json") as file:
+        config = json.load(file)
     
+    data = {}
     for file_name in tqdm(file_names):
-        name = file_name[0:file_name.find('_')]
+        name = file_name[0:file_name.find('_')-1]
         path_img_edges = path_dir_edges / file_name
         image_edges = cv2.imread(str(path_img_edges))
         areas = zirkon_image_to_areas(image_edges)
-        data[name] = areas.tolist()
+        areas = areas*(config[name]["um"]/config[name]["pix"])
+        areas = [round(num, 2) for num in areas.tolist()]
+        areas_data = {"areas": areas, "units": "um"}
+        data[name] = areas_data
     
     with open("data/zirkons_areas.json", 'w+') as json_file:
         json.dump(data, json_file, indent=4)
