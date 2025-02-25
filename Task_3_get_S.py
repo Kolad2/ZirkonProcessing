@@ -3,62 +3,47 @@ import os
 import numpy as np
 import cv2
 from scipy.io import savemat
-
-from rsf_edges import modelini, get_model_edges, modelgpu
+from pyrocksegmentation.basic_segmentator import Segmentator
+from pyrocksegmentation import Extractor
 import matplotlib.pyplot as plt
-from StatisticEstimation import GetThetaLognorm
 from scipy import stats as st
-
-Path_dir_edges = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleBINEdgesPrep"
-Path_dir_imgs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscale"
-Path_dir_segs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleSegmentation"
-
-
-FileNames = os.listdir(Path_dir_edges)
-print(FileNames)
-
-for FileName in FileNames:
-       Path_img_edges = Path_dir_edges + "/" + FileName
-       #Path_img = Path_dir_imgs + "/" + FileName[0:9] + ".tif"
-       Path_img_seg = Path_dir_segs+ "/" + FileName[0:9] + "_segs.tif"
-
-       img_edges = cv2.imread(Path_img_edges)
-       #img = cv2.imread(Path_img)
-
-       B, G, R = cv2.split(img_edges)
-
-       G = 255 - G
-
-       G[((R==255) & (B==0))] = 255
-       _, area_marks = cv2.connectedComponents(255-R)
-       area_marks = area_marks + 1
-       area_marks[area_marks == 1] = 0
-       area_marks[((R==255) & (B==0))] = 1
-       area_marks = cv2.watershed(img_edges*0, area_marks)
-       area_marks = area_marks - 1
-       area_marks[area_marks == -2] = 0
-       area_marks[area_marks == -1] = 0
-       #
-       unique, S = np.unique(area_marks, return_counts=True)
-       save_dict = {'S': S[1:]}
-       savemat("temp/Data/" + FileName[0:9] + "_S.mat", save_dict)
-       #
-       rng = np.random.default_rng()
-       MR = np.empty(area_marks.shape, np.uint8)
-       MG = np.empty(area_marks.shape, np.uint8)
-       MB = np.empty(area_marks.shape, np.uint8)
-       for p in np.unique(area_marks):
-              MR[area_marks == p] = rng.integers(0, 255)
-              MG[area_marks == p] = rng.integers(0, 255)
-              MB[area_marks == p] = rng.integers(0, 255)
-       MR[area_marks == 0] = 0
-       MG[area_marks == 0] = 0
-       MB[area_marks == 0] = 0
-       #
-       img_M = cv2.merge((MR, MG, MB))
-       cv2.imwrite(Path_img_seg , img_M)
+from pathlib import Path
+from tqdm import tqdm
+import json
 
 
+def main():
+    # Path_dir_edges = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleBINEdgesPrep"
+    # Path_dir_imgs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscale"
+    # Path_dir_segs = "/media/kolad/HardDisk/Zirkon/ZirkonUpscaleSegmentation"
+    
+    path_dir_edges = Path(".\data\ZirkonEdges")
+    
+    file_names = os.listdir(str(path_dir_edges))
+    
+    data = {}
+    
+    for file_name in tqdm(file_names):
+        name = file_name[0:file_name.find('_')]
+        path_img_edges = path_dir_edges / file_name
+        image_edges = cv2.imread(str(path_img_edges))
+        areas = zirkon_image_to_areas(image_edges)
+        data[name] = areas.tolist()
+    
+    with open("data/zirkons_areas.json", 'w+') as json_file:
+        json.dump(data, json_file, indent=4)
 
 
+def zirkon_image_to_areas(image):
+    b, g, r = cv2.split(image)
+    edges = np.zeros(b.shape)
+    edges[(b == 0) & (r == 255)] = 255
+    
+    segments = Segmentator(g).run()
+    segments[edges == 255] = -1
+    areas, centers = Extractor(segments).extruct_centers(indent=1)
+    return areas
 
+
+if __name__ == '__main__':
+    main()
