@@ -5,12 +5,19 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.font_manager
+import json
+from pyrockstats import ecdf
+from pyrockstats.distrebutions import lognorm, weibull, paretoexp
+from pyrockstats.bootstrap.ks_statistics import get_ks_distribution
 
 
 def main():
-    exit()
+    with open("./data/zirkons_areas.json") as file:
+        data = json.load(file)
     
-    
+    for name in data:
+        fun1(data[name]["areas"])
+        exit()
     
     exit()
     font_path = "/usr/share/fonts/truetype/msttcorefonts/times.ttf"
@@ -154,6 +161,25 @@ def main():
         plt.show()
         plt.close('all')
 
+
+def fun1(areas):
+    areas = np.array(areas)
+    np.mean(np.log(areas))
+    values, e_freq = ecdf(areas)
+    ks = {
+        #"lognorm": get_ks_distribution(areas, lognorm, n_ks=100),
+        #"weibull": get_ks_distribution(areas, weibull, n_ks=100),
+        "paretoexp": get_ks_distribution(areas, paretoexp, n_ks=100)
+    }
+    #values_1, freqs_1 = ecdf(ks["lognorm"])
+    #values_2, freqs_2 = ecdf(ks["weibull"])
+    values_3, freqs_3 = ecdf(ks["paretoexp"])
+    
+    #plt.plot(values_1, freqs_1, color="red")
+    #plt.plot(values_2, freqs_2, color="blue")
+    plt.plot(values_3, freqs_3, color="blue")
+    plt.show()
+    
 
 if __name__ == '__main__':
     main()
