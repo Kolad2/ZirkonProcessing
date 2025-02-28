@@ -167,17 +167,17 @@ def fun1(areas):
     np.mean(np.log(areas))
     values, e_freq = ecdf(areas)
     ks = {
-        #"lognorm": get_ks_distribution(areas, lognorm, n_ks=100),
-        #"weibull": get_ks_distribution(areas, weibull, n_ks=100),
-        "paretoexp": get_ks_distribution(areas, paretoexp, n_ks=100)
+        "lognorm": get_ks_distribution(areas, lognorm, n_ks=500),
+        "weibull": get_ks_distribution(areas, weibull, n_ks=500),
+        "paretoexp": get_ks_distribution(areas, paretoexp, n_ks=500)
     }
-    #values_1, freqs_1 = ecdf(ks["lognorm"])
-    #values_2, freqs_2 = ecdf(ks["weibull"])
+    values_1, freqs_1 = ecdf(ks["lognorm"])
+    values_2, freqs_2 = ecdf(ks["weibull"])
     values_3, freqs_3 = ecdf(ks["paretoexp"])
     
-    #plt.plot(values_1, freqs_1, color="red")
-    #plt.plot(values_2, freqs_2, color="blue")
-    plt.plot(values_3, freqs_3, color="blue")
+    plt.plot(values_1, freqs_1, color="red")
+    plt.plot(values_2, freqs_2, color="blue")
+    plt.plot(values_3, freqs_3, color="green")
     plt.show()
     
 
