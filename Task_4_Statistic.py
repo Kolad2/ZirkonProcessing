@@ -164,19 +164,48 @@ def main():
 
 
 def fun1(areas):
+    models = {
+        "lognorm": lognorm,
+        "weibull": weibull,
+        "aretoexp": paretoexp
+    }
+
     areas = np.array(areas)
-    np.mean(np.log(areas))
+    xmin = np.min(areas)
+    xmax = np.max(areas)
+
     values, e_freq = ecdf(areas)
+
     ks = {
-        "lognorm": get_ks_distribution(areas, lognorm, n_ks=500),
-        "weibull": get_ks_distribution(areas, weibull, n_ks=500),
-        "paretoexp": get_ks_distribution(areas, paretoexp, n_ks=500)
+        name: get_ks_distribution(areas, model, n_ks=500) for name, model in models.items()
     }
     
     alpha = 0.95
     confidence_value = {
-        model: get_confidence_value(ks[model], alpha=alpha) for model in ks
+        name: get_confidence_value(_ks, significance=alpha) for name, _ks in ks.items()
     }
+
+    theta = {
+        name: models[name].fit(areas, xmin=xmin, xmax=xmax) for name in models
+    }
+    dist = {
+        name: model(*theta[name], xmin=xmin, xmax=xmax) for name, model in models.items()
+    }
+
+
+    x = np.logspace(np.log(xmin), np.log(xmax), 100)
+    y = {
+        "lognorm": dist["lognorm"].cdf(x, xmin=xmin, xmax=xmax)
+    }
+
+
+    fig = plt.figure(figsize=(14, 9))
+    axs = [fig.add_subplot(1, 1, 1)]
+    axs[0].plot(x, y["lognorm"])
+    axs[0].plot(values, e_freq)
+    axs[0].set_xscale('log')
+    plt.show()
+
     print(confidence_value)
 
     
