@@ -9,6 +9,7 @@ import json
 from pyrockstats import ecdf
 from pyrockstats.distrebutions import lognorm, weibull, paretoexp
 from pyrockstats.bootstrap.ks_statistics import get_ks_distribution
+from pyrockstats.bootstrap.ks_statistics import get_confidence_value
 
 
 def main():
@@ -171,14 +172,13 @@ def fun1(areas):
         "weibull": get_ks_distribution(areas, weibull, n_ks=500),
         "paretoexp": get_ks_distribution(areas, paretoexp, n_ks=500)
     }
-    values_1, freqs_1 = ecdf(ks["lognorm"])
-    values_2, freqs_2 = ecdf(ks["weibull"])
-    values_3, freqs_3 = ecdf(ks["paretoexp"])
     
-    plt.plot(values_1, freqs_1, color="red")
-    plt.plot(values_2, freqs_2, color="blue")
-    plt.plot(values_3, freqs_3, color="green")
-    plt.show()
+    alpha = 0.95
+    confidence_value = {
+        model: get_confidence_value(ks[model], alpha=alpha) for model in ks
+    }
+    print(confidence_value)
+
     
 
 if __name__ == '__main__':
