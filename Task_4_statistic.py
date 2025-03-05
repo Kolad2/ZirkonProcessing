@@ -12,7 +12,7 @@ from pyrockstats import ecdf
 from pyrockstats.distrebutions import lognorm, weibull, paretoexp
 from pyrockstats.bootstrap.ks_statistics import get_ks_distribution
 from pyrockstats.bootstrap.ks_statistics import get_confidence_value
-
+from plot_tools import plot_data
 
 def main():
     with open("./data/zirkons_areas.json") as file:
@@ -55,27 +55,6 @@ def get_test_data(areas):
         "ecdf": {"values": values.tolist(), "freqs": e_freq.tolist()}
     }
     return data
-
-
-def plot_data(data):
-    font_path = Path(".") / "assets" / "timesnewromanpsmt.ttf"
-    custom_font = mpl.font_manager.FontProperties(fname=font_path, size=16)
-    _ecdf = data["ecdf"]
-    x = data["x"]
-    xmin = data["xmin"]
-    xmax = data["xmax"]
-
-    from plot_tools import plot_distribution
-
-    fig = plt.figure(figsize=(12, 4))
-    axs = [fig.add_subplot(1, 3, 1),
-           fig.add_subplot(1, 3, 2),
-           fig.add_subplot(1, 3, 3)]
-    plot_distribution(axs[0], data, "lognorm")
-    plot_distribution(axs[1], data, "weibull")
-    plot_distribution(axs[2], data, "paretoexp")
-    plt.subplots_adjust(bottom=0.2)
-    plt.show()
 
 
 class DistributionTest:
