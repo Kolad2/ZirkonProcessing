@@ -17,21 +17,21 @@ from pyrockstats.bootstrap.ks_statistics import get_confidence_value
 def main():
     with open("./data/zirkons_areas.json") as file:
         data = json.load(file)
-    
+    out_data = {}
     for name in data:
-        print(name)
-        fun1(data[name]["areas"])
+        _out_data = get_test_data(data[name]["areas"])
+        plot_data(_out_data)
         exit()
+        out_data[name] = _out_data
 
 
-def fun1(areas):
+def get_test_data(areas):
+    areas = np.array(areas)
     models = {
         "lognorm": lognorm,
         "weibull": weibull,
         "paretoexp": paretoexp
     }
-
-    areas = np.array(areas)
     xmin = np.min(areas)
     xmax = np.max(areas)
 
@@ -42,20 +42,33 @@ def fun1(areas):
 
     x = np.logspace(np.log10(xmin), np.log10(xmax), 100)
     alpha = 0.05
-    plot_datas = {name: test.get_plot_data(x, alpha) for name, test in tests.items()}
+    data = {
+        "x": x.tolist(),
+        "xmin": xmin,
+        "xmax": xmax,
+        "alpha": alpha,
+        "test_data": {name: test.get_data(x, alpha) for name, test in tests.items()},
+        "ecdf": {"values": values.tolist(), "freqs": e_freq.tolist()}
+    }
+    return data
 
 
+def plot_data(data):
     font_path = Path(".") / "assets" / "timesnewromanpsmt.ttf"
     custom_font = mpl.font_manager.FontProperties(fname=font_path, size=16)
+    _ecdf = data["ecdf"]
+    x = data["x"]
+    xmin = data["xmin"]
+    xmax = data["xmax"]
 
-    def plot_distribution(ax, plot_data):
-        cdf_min = plot_data["cdf_min"]
-        cdf_max = plot_data["cdf_max"]
-        cdf = plot_data["cdf"]
+    def plot_distribution(ax, test_data):
+        cdf_min = test_data["cdf_min"]
+        cdf_max = test_data["cdf_max"]
+        cdf = test_data["cdf"]
 
         ax.fill_between(x, cdf_min, cdf_max, color="gray", label="1")
         ax.plot(x, cdf, color="black", linestyle="--", label="2")
-        ax.plot(values, e_freq, color="black", label="3")
+        ax.plot(_ecdf["values"], _ecdf["freqs"], color="black", label="3")
         ax.set_xscale('log')
         ax.set_xlabel(r's, мкм$^\mathregular{2}$', fontproperties=custom_font, size=16)
         for label in ax.get_xticklabels():
@@ -72,22 +85,27 @@ def fun1(areas):
     axs = [fig.add_subplot(1, 3, 1),
            fig.add_subplot(1, 3, 2),
            fig.add_subplot(1, 3, 3)]
-    plot_distribution(axs[0], plot_datas["lognorm"])
-    plot_distribution(axs[1], plot_datas["weibull"])
-    plot_distribution(axs[2], plot_datas["paretoexp"])
+    plot_distribution(axs[0], data["test_data"]["lognorm"])
+    plot_distribution(axs[1], data["test_data"]["weibull"])
+    plot_distribution(axs[2], data["test_data"]["paretoexp"])
     plt.subplots_adjust(bottom=0.2)
     plt.show()
+
+
+
 
 class DistributionTest:
     def __init__(self, areas, model):
         self.xmin = np.min(areas)
         self.xmax = np.max(areas)
+        self.areas = areas
         self.model = model
         self.ks = get_ks_distribution(areas, model, n_ks=500)
         self.theta = self.model.fit(areas, xmin=self.xmin, xmax=self.xmax)
         self.dist = self.model(*self.theta, xmin=self.xmin, xmax=self.xmax)
         self.confidence_value = None
         self.alpha = None
+        self.hypothesis = None
 
     def get_confidence_value(self, alpha):
         if self.alpha is not None and alpha == self.alpha:
@@ -100,17 +118,27 @@ class DistributionTest:
         print(x)
         return self.dist.cdf(x, xmin=self.xmin, xmax=self.xmax)
 
-    def get_plot_data(self, x, alpha):
+    def ks_test(self, alpha, e_values = None, e_cdf = None):
+        if e_values is None or e_cdf is None:
+            e_values, e_cdf = ecdf(self.areas)
+        confidence_value = self.get_confidence_value(alpha)
+        cdf_min = self.model_cdf(e_values) - confidence_value
+        cdf_max = self.model_cdf(e_values) + confidence_value
+        self.hypothesis = np.all(cdf_min < e_cdf) and np.all(cdf_max > e_cdf)
+        return self.hypothesis
+
+    def get_data(self, x, alpha):
         confidence_value = self.get_confidence_value(alpha)
         cdf = self.model_cdf(x)
         cdf_min = cdf - confidence_value
         cdf_max = cdf + confidence_value
-        plot_data = {
-            "cdf": cdf,
+        data = {
+            "cdf": cdf.tolist(),
             "cdf_min": cdf_min,
-            "cdf_max": cdf_max
+            "cdf_max": cdf_max,
+            "ks_test": self.ks_test(alpha)
         }
-        return plot_data
+        return data
 
 
 if __name__ == '__main__':
