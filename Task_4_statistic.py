@@ -7,7 +7,7 @@ import matplotlib as mpl
 import matplotlib.font_manager
 import json
 from pathlib import Path
-
+from tqdm import tqdm
 from pyrockstats import ecdf
 from pyrockstats.distrebutions import lognorm, weibull, paretoexp
 from pyrockstats.bootstrap.ks_statistics import get_ks_distribution
@@ -19,10 +19,14 @@ def main():
         data = json.load(file)
     out_data = {}
     for name in data:
+        print(name + " " + "start")
         _out_data = get_test_data(data[name]["areas"])
-        plot_data(_out_data)
-        exit()
+        # plot_data(_out_data)
         out_data[name] = _out_data
+        print(name + " " + "ready")
+
+    with open("./data/zirkons_tests.json", 'w+') as json_file:
+        json.dump(out_data, json_file, indent=4)
 
 
 def get_test_data(areas):
@@ -61,37 +65,17 @@ def plot_data(data):
     xmin = data["xmin"]
     xmax = data["xmax"]
 
-    def plot_distribution(ax, test_data):
-        cdf_min = test_data["cdf_min"]
-        cdf_max = test_data["cdf_max"]
-        cdf = test_data["cdf"]
-
-        ax.fill_between(x, cdf_min, cdf_max, color="gray", label="1")
-        ax.plot(x, cdf, color="black", linestyle="--", label="2")
-        ax.plot(_ecdf["values"], _ecdf["freqs"], color="black", label="3")
-        ax.set_xscale('log')
-        ax.set_xlabel(r's, мкм$^\mathregular{2}$', fontproperties=custom_font, size=16)
-        for label in ax.get_xticklabels():
-            label.set_fontproperties(custom_font)
-            label.set_size(16)
-        for label in ax.get_yticklabels():
-            label.set_fontproperties(custom_font)
-            label.set_size(16)
-        ax.legend(loc='lower right', fontsize=16, prop=custom_font)
-        ax.set_ylim([0, 1])
-        ax.set_xlim([xmin, xmax])
+    from plot_tools import plot_distribution
 
     fig = plt.figure(figsize=(12, 4))
     axs = [fig.add_subplot(1, 3, 1),
            fig.add_subplot(1, 3, 2),
            fig.add_subplot(1, 3, 3)]
-    plot_distribution(axs[0], data["test_data"]["lognorm"])
-    plot_distribution(axs[1], data["test_data"]["weibull"])
-    plot_distribution(axs[2], data["test_data"]["paretoexp"])
+    plot_distribution(axs[0], data, "lognorm")
+    plot_distribution(axs[1], data, "weibull")
+    plot_distribution(axs[2], data, "paretoexp")
     plt.subplots_adjust(bottom=0.2)
     plt.show()
-
-
 
 
 class DistributionTest:
@@ -115,7 +99,6 @@ class DistributionTest:
         return self.confidence_value
 
     def model_cdf(self, x):
-        print(x)
         return self.dist.cdf(x, xmin=self.xmin, xmax=self.xmax)
 
     def ks_test(self, alpha, e_values = None, e_cdf = None):
@@ -134,9 +117,9 @@ class DistributionTest:
         cdf_max = cdf + confidence_value
         data = {
             "cdf": cdf.tolist(),
-            "cdf_min": cdf_min,
-            "cdf_max": cdf_max,
-            "ks_test": self.ks_test(alpha)
+            "cdf_min": cdf_min.tolist(),
+            "cdf_max": cdf_max.tolist(),
+            "ks_test": str(self.ks_test(alpha))
         }
         return data
 
