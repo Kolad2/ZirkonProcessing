@@ -47,7 +47,8 @@ def plot_distribution(ax, data, name):
     ax.plot(x, cdf, color="black", linestyle="--", label="2")
     ax.plot(ecdf["values"], ecdf["freqs"], color="black", label="3")
     ax.set_xscale('log')
-    ax.set_xlabel(r's, мкм$^\mathregular{2}$', fontproperties=custom_font, size=16)
+    ax.set_xlabel(r's, $\mu m^\mathregular{2}$', fontproperties=custom_font, size=16)
+    ax.set_ylabel(r'$CDF, -$', fontproperties=custom_font, size=16)
     for label in ax.get_xticklabels():
         label.set_fontproperties(custom_font)
         label.set_size(16)
