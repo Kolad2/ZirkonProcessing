@@ -53,7 +53,7 @@ def get_density_data(s):
 
     # Средние точки бинов
     s_rho = (bins[:-1] + bins[1:]) / 2
-    s_rho = np.log(s_rho[mask])
+    s_rho = np.log10(s_rho[mask])
 
     # Преобразуем в список для JSON-сериализации
     data = {
