@@ -25,6 +25,9 @@ def plot_data(data):
     plot_distribution(axs[0], data, "lognorm")
     plot_distribution(axs[1], data, "weibull")
     plot_distribution(axs[2], data, "paretoexp")
+    axs[0].set_title("Логнормальное рас-е")
+    axs[1].set_title("Рас-е Вейбулла")
+    axs[2].set_title("Степенное рас-е")
     plt.subplots_adjust(bottom=0.2)
     plt.show()
 
