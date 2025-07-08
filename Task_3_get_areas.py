@@ -30,7 +30,7 @@ def main():
         path_img_edges = path_dir_edges / file_name
         image_edges = cv2.imread(str(path_img_edges))
         areas = zirkon_image_to_areas(image_edges)
-        areas = areas*(config[name]["um"]/config[name]["pix"])
+        areas = areas*((config[name]["um"]/config[name]["pix"])**2)
         areas = [round(num, 2) for num in areas.tolist()]
         areas_data = {"areas": areas, "units": "um"}
         data[name] = areas_data
